@@ -58,8 +58,11 @@
 
 #if defined(SUPPORT_MODULE_RTEXT)
 
+#define SDF_IMPLEMENTATION
+
 #include "utils.h"          // Required for: LoadFileText()
 #include "rlgl.h"           // OpenGL abstraction layer to OpenGL 1.1, 2.1, 3.3+ or ES2 -> Only DrawTextPro()
+#include "sdf.h"
 
 #include <stdlib.h>         // Required for: malloc(), free()
 #include <stdio.h>          // Required for: vsprintf()
@@ -544,10 +547,13 @@ GlyphInfo *LoadFontData(const unsigned char *fileData, int dataSize, int fontSiz
     #define FONT_SDF_ON_EDGE_VALUE         128      // SDF font generation on edge value
 #endif
 #ifndef FONT_SDF_PIXEL_DIST_SCALE
-    #define FONT_SDF_PIXEL_DIST_SCALE     64.0f     // SDF font generation pixel distance scale
+    #define FONT_SDF_PIXEL_DIST_SCALE     128.0f     // SDF font generation pixel distance scale
 #endif
 #ifndef FONT_BITMAP_ALPHA_THRESHOLD
     #define FONT_BITMAP_ALPHA_THRESHOLD     80      // Bitmap (B&W) font generation alpha threshold
+#endif
+#ifndef FONT_SDF_RADIUS
+    #define FONT_SDF_RADIUS 4
 #endif
 
     GlyphInfo *chars = NULL;
@@ -597,8 +603,17 @@ GlyphInfo *LoadFontData(const unsigned char *fileData, int dataSize, int fontSiz
                 //      stbtt_GetCodepointBitmapBox()        -- how big the bitmap must be
                 //      stbtt_MakeCodepointBitmap()          -- renders into bitmap you provide
 
-                if (type != FONT_SDF) chars[i].image.data = stbtt_GetCodepointBitmap(&fontInfo, scaleFactor, scaleFactor, ch, &chw, &chh, &chars[i].offsetX, &chars[i].offsetY);
-                else if (ch != 32) chars[i].image.data = stbtt_GetCodepointSDF(&fontInfo, scaleFactor, ch, FONT_SDF_CHAR_PADDING, FONT_SDF_ON_EDGE_VALUE, FONT_SDF_PIXEL_DIST_SCALE, &chw, &chh, &chars[i].offsetX, &chars[i].offsetY);
+                if (type != FONT_SDF) chars[i].image.data = stbtt_GetCodepointBitmap(&fontInfo, scaleFactor, scaleFactor, ch, &chw, &chh, &chars[i].offsetX, &chars[i].offsetY, 0);
+                else if (ch != 32)
+                {
+                    unsigned char* imageData = 
+                        //stbtt_GetCodepointSDF(&fontInfo, scaleFactor, ch, FONT_SDF_CHAR_PADDING, FONT_SDF_ON_EDGE_VALUE, FONT_SDF_PIXEL_DIST_SCALE, &chw, &chh, &chars[i].offsetX, &chars[i].offsetY);
+                        stbtt_GetCodepointBitmap(&fontInfo, scaleFactor, scaleFactor, ch, &chw, &chh, &chars[i].offsetX, &chars[i].offsetY, FONT_SDF_RADIUS);
+                    
+                    sdfBuildDistanceField(imageData, chw, FONT_SDF_RADIUS, imageData, chw, chh, chw);
+
+                    chars[i].image.data = imageData;
+                }
                 else chars[i].image.data = NULL;
 
                 stbtt_GetCodepointHMetrics(&fontInfo, ch, &chars[i].advanceX, NULL);

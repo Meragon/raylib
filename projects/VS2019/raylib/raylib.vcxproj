@@ -329,6 +329,7 @@
     <ClInclude Include="..\..\..\src\raylib.h" />
     <ClInclude Include="..\..\..\src\raymath.h" />
     <ClInclude Include="..\..\..\src\rlgl.h" />
+    <ClInclude Include="..\..\..\src\sdf.h" />
     <ClInclude Include="..\..\..\src\utils.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
