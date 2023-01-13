@@ -49,6 +49,11 @@
 #include <stdio.h>                      // Required for: FILE, fopen(), fseek(), ftell(), fread(), fwrite(), fprintf(), vprintf(), fclose()
 #include <stdarg.h>                     // Required for: va_list, va_start(), va_end()
 #include <string.h>                     // Required for: strcpy(), strcat()
+#include <wchar.h>
+
+typedef unsigned int char32_t;
+typedef unsigned short char16_t;
+typedef unsigned char char8_t;
 
 //----------------------------------------------------------------------------------
 // Defines and Macros
@@ -178,11 +183,84 @@ void MemFree(void *ptr)
     RL_FREE(ptr);
 }
 
+bool utf8_trail_byte(char8_t const in, char32_t* out) {
+    if (in < 0x80 || 0xBF < in)
+        return false;
+
+    *out = (*out << 6) | (in & 0x3F);
+    return true;
+}
+
+// Returns number of trailing bytes.
+// -1 on illegal header bytes.
+int utf8_header_byte(char8_t const in, char32_t* out) {
+    if (in < 0x80) {  // ASCII
+        *out = in;
+        return 0;
+    }
+    if (in < 0xC0) {  // not a header
+        return -1;
+    }
+    if (in < 0xE0) {
+        *out = in & 0x1F;
+        return 1;
+    }
+    if (in < 0xF0) {
+        *out = in & 0x0F;
+        return 2;
+    }
+    if (in < 0xF8) {
+        *out = in & 0x7;
+        return 3;
+    }
+    return -1;
+}
+
+ptrdiff_t utf8_to_utf16(char8_t const* u8_begin,
+    char8_t const* const u8_end,
+    char16_t* u16out) {
+    ptrdiff_t outstr_size = 0;
+    while (u8_begin < u8_end) {
+        char32_t code_point = 0;
+        const size_t byte_cnt = utf8_header_byte(*u8_begin++, &code_point);
+
+        if (byte_cnt < 0 || byte_cnt > u8_end - u8_begin)
+            return false;
+
+        for (int i = 0; i < byte_cnt; ++i)
+            if (!utf8_trail_byte(*u8_begin++, &code_point))
+                return -1;
+
+        if (code_point < 0xFFFF) {
+            if (u16out)
+                *u16out++ = (char16_t)(code_point);
+            ++outstr_size;
+        }
+        else {
+            if (u16out) {
+                code_point -= 0x10000;
+                *u16out++ = (char16_t)((code_point >> 10) + 0xD800);
+                *u16out++ = (char16_t)((code_point & 0x3FF) + 0xDC00);
+            }
+            outstr_size += 2;
+        }
+    }
+    return outstr_size;
+}
+
 // Load data from file into a buffer
 unsigned char *LoadFileData(const char *fileName, unsigned int *bytesRead)
 {
+#ifdef _WIN32
+    
+    char16_t fileName16[256] = { 0 };
+
+    utf8_to_utf16(fileName, fileName + strlen(fileName), fileName16);
+#endif
     unsigned char *data = NULL;
     *bytesRead = 0;
+
+    fileName = fileName16;
 
     if (fileName != NULL)
     {
@@ -192,8 +270,13 @@ unsigned char *LoadFileData(const char *fileName, unsigned int *bytesRead)
             return data;
         }
 #if defined(SUPPORT_STANDARD_FILEIO)
-        FILE *file = fopen(fileName, "rb");
+#ifdef _WIN32
 
+
+        FILE *file = _wfopen(fileName16, L"rb");
+#else
+        FILE* file = fopen(fileName, "rb");
+#endif // _WIN32
         if (file != NULL)
         {
             // WARNING: On binary streams SEEK_END could not be found,
@@ -273,6 +356,12 @@ bool SaveFileData(const char *fileName, void *data, unsigned int bytesToWrite)
 char *LoadFileText(const char *fileName)
 {
     char *text = NULL;
+#ifdef _WIN32
+
+    char16_t fileName16[256] = { 0 };
+
+    utf8_to_utf16(fileName, fileName + strlen(fileName), fileName16);
+#endif
 
     if (fileName != NULL)
     {
@@ -282,7 +371,14 @@ char *LoadFileText(const char *fileName)
             return text;
         }
 #if defined(SUPPORT_STANDARD_FILEIO)
-        FILE *file = fopen(fileName, "rt");
+#ifdef _WIN32
+
+
+        FILE* file = _wfopen(fileName16, L"rt");
+#else
+        FILE* file = fopen(fileName, "rt");
+#endif // _WIN32
+
 
         if (file != NULL)
         {
