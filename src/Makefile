@@ -290,7 +290,7 @@ else
 endif
 
 ifeq ($(PLATFORM_OS), LINUX)
-    CFLAGS += -fPIC
+    CFLAGS += -fPIC -w
 endif
 
 ifeq ($(RAYLIB_BUILD_MODE),DEBUG)
@@ -461,9 +461,9 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
         LDLIBS = -static-libgcc -lopengl32 -lgdi32 -lwinmm
     endif
     ifeq ($(PLATFORM_OS),LINUX)
-        LDLIBS = -lGL -lc -lm -lpthread -ldl -lrt
+        LDLIBS = -lc -lm -lpthread -ldl -lrt
         ifeq ($(USE_WAYLAND_DISPLAY),FALSE)
-            LDLIBS += -lX11
+            LDLIBS += 
         endif
     endif
     ifeq ($(PLATFORM_OS),OSX)
@@ -498,7 +498,7 @@ OBJS = rcore.o \
 
 ifeq ($(PLATFORM),PLATFORM_DESKTOP)
     ifeq ($(USE_EXTERNAL_GLFW),FALSE)
-        OBJS += rglfw.o
+        OBJS += rglfw.o exglfw.o
     endif
 endif
 ifeq ($(RAYLIB_MODULE_MODELS),TRUE)
@@ -603,6 +603,10 @@ rcore.o : rcore.c raylib.h rlgl.h utils.h raymath.h rcamera.h rgestures.h
 
 # Compile rglfw module
 rglfw.o : rglfw.c
+	$(CC) $(GLFW_OSX) -c $< $(CFLAGS) $(INCLUDE_PATHS)
+
+# Compile rglfw module
+exglfw.o : exglfw.c
 	$(CC) $(GLFW_OSX) -c $< $(CFLAGS) $(INCLUDE_PATHS)
 
 # Compile shapes module

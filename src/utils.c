@@ -50,11 +50,11 @@
 #include <stdarg.h>                     // Required for: va_list, va_start(), va_end()
 #include <string.h>                     // Required for: strcpy(), strcat()
 #include <wchar.h>
-
+#include <stdint.h>
 typedef unsigned int char32_t;
 typedef unsigned short char16_t;
 typedef unsigned char char8_t;
-
+typedef intptr_t ptrdiff_t;
 //----------------------------------------------------------------------------------
 // Defines and Macros
 //----------------------------------------------------------------------------------
@@ -260,7 +260,9 @@ unsigned char *LoadFileData(const char *fileName, unsigned int *bytesRead)
     unsigned char *data = NULL;
     *bytesRead = 0;
 
+#ifdef _WIN32
     fileName = fileName16;
+#endif
 
     if (fileName != NULL)
     {
