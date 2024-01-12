@@ -34,15 +34,15 @@
 
 // Check if config flags have been externally provided on compilation line
 #if !defined(EXTERNAL_CONFIG_FLAGS)
-    #include "config.h"                 // Defines module configuration flags
+#include "config.h"                 // Defines module configuration flags
 #endif
 
 #include "utils.h"
 
 #if defined(PLATFORM_ANDROID)
-    #include <errno.h>                  // Required for: Android error types
-    #include <android/log.h>            // Required for: Android log system: __android_log_vprint()
-    #include <android/asset_manager.h>  // Required for: Android assets manager: AAsset, AAssetManager_open(), ...
+#include <errno.h>                  // Required for: Android error types
+#include <android/log.h>            // Required for: Android log system: __android_log_vprint()
+#include <android/asset_manager.h>  // Required for: Android assets manager: AAsset, AAssetManager_open(), ...
 #endif
 
 #include <stdlib.h>                     // Required for: exit()
@@ -59,7 +59,7 @@ typedef intptr_t ptrdiff_t;
 // Defines and Macros
 //----------------------------------------------------------------------------------
 #ifndef MAX_TRACELOG_MSG_LENGTH
-    #define MAX_TRACELOG_MSG_LENGTH     128     // Max length of one trace-log message
+#define MAX_TRACELOG_MSG_LENGTH     128     // Max length of one trace-log message
 #endif
 
 //----------------------------------------------------------------------------------
@@ -84,21 +84,21 @@ void SetSaveFileTextCallback(SaveFileTextCallback callback) { saveFileText = cal
 
 
 #if defined(PLATFORM_ANDROID)
-static AAssetManager *assetManager = NULL;          // Android assets manager pointer
-static const char *internalDataPath = NULL;         // Android internal data path
+static AAssetManager* assetManager = NULL;          // Android assets manager pointer
+static const char* internalDataPath = NULL;         // Android internal data path
 #endif
 
 //----------------------------------------------------------------------------------
 // Module specific Functions Declaration
 //----------------------------------------------------------------------------------
 #if defined(PLATFORM_ANDROID)
-FILE *funopen(const void *cookie, int (*readfn)(void *, char *, int), int (*writefn)(void *, const char *, int),
-              fpos_t (*seekfn)(void *, fpos_t, int), int (*closefn)(void *));
+FILE* funopen(const void* cookie, int (*readfn)(void*, char*, int), int (*writefn)(void*, const char*, int),
+    fpos_t(*seekfn)(void*, fpos_t, int), int (*closefn)(void*));
 
-static int android_read(void *cookie, char *buf, int size);
-static int android_write(void *cookie, const char *buf, int size);
-static fpos_t android_seek(void *cookie, fpos_t offset, int whence);
-static int android_close(void *cookie);
+static int android_read(void* cookie, char* buf, int size);
+static int android_write(void* cookie, const char* buf, int size);
+static fpos_t android_seek(void* cookie, fpos_t offset, int whence);
+static int android_close(void* cookie);
 #endif
 
 //----------------------------------------------------------------------------------
@@ -109,7 +109,7 @@ static int android_close(void *cookie);
 void SetTraceLogLevel(int logType) { logTypeLevel = logType; }
 
 // Show trace log messages (LOG_INFO, LOG_WARNING, LOG_ERROR, LOG_DEBUG)
-void TraceLog(int logType, const char *text, ...)
+void TraceLog(int logType, const char* text, ...)
 {
 #if defined(SUPPORT_TRACELOG)
     // Message has level below current threshold, don't emit
@@ -128,26 +128,26 @@ void TraceLog(int logType, const char *text, ...)
 #if defined(PLATFORM_ANDROID)
     switch (logType)
     {
-        case LOG_TRACE: __android_log_vprint(ANDROID_LOG_VERBOSE, "raylib", text, args); break;
-        case LOG_DEBUG: __android_log_vprint(ANDROID_LOG_DEBUG, "raylib", text, args); break;
-        case LOG_INFO: __android_log_vprint(ANDROID_LOG_INFO, "raylib", text, args); break;
-        case LOG_WARNING: __android_log_vprint(ANDROID_LOG_WARN, "raylib", text, args); break;
-        case LOG_ERROR: __android_log_vprint(ANDROID_LOG_ERROR, "raylib", text, args); break;
-        case LOG_FATAL: __android_log_vprint(ANDROID_LOG_FATAL, "raylib", text, args); break;
-        default: break;
+    case LOG_TRACE: __android_log_vprint(ANDROID_LOG_VERBOSE, "raylib", text, args); break;
+    case LOG_DEBUG: __android_log_vprint(ANDROID_LOG_DEBUG, "raylib", text, args); break;
+    case LOG_INFO: __android_log_vprint(ANDROID_LOG_INFO, "raylib", text, args); break;
+    case LOG_WARNING: __android_log_vprint(ANDROID_LOG_WARN, "raylib", text, args); break;
+    case LOG_ERROR: __android_log_vprint(ANDROID_LOG_ERROR, "raylib", text, args); break;
+    case LOG_FATAL: __android_log_vprint(ANDROID_LOG_FATAL, "raylib", text, args); break;
+    default: break;
     }
 #else
     char buffer[MAX_TRACELOG_MSG_LENGTH] = { 0 };
 
     switch (logType)
     {
-        case LOG_TRACE: strcpy(buffer, "TRACE: "); break;
-        case LOG_DEBUG: strcpy(buffer, "DEBUG: "); break;
-        case LOG_INFO: strcpy(buffer, "INFO: "); break;
-        case LOG_WARNING: strcpy(buffer, "WARNING: "); break;
-        case LOG_ERROR: strcpy(buffer, "ERROR: "); break;
-        case LOG_FATAL: strcpy(buffer, "FATAL: "); break;
-        default: break;
+    case LOG_TRACE: strcpy(buffer, "TRACE: "); break;
+    case LOG_DEBUG: strcpy(buffer, "DEBUG: "); break;
+    case LOG_INFO: strcpy(buffer, "INFO: "); break;
+    case LOG_WARNING: strcpy(buffer, "WARNING: "); break;
+    case LOG_ERROR: strcpy(buffer, "ERROR: "); break;
+    case LOG_FATAL: strcpy(buffer, "FATAL: "); break;
+    default: break;
     }
 
     strcat(buffer, text);
@@ -164,21 +164,21 @@ void TraceLog(int logType, const char *text, ...)
 
 // Internal memory allocator
 // NOTE: Initializes to zero by default
-void *MemAlloc(int size)
+void* MemAlloc(int size)
 {
-    void *ptr = RL_CALLOC(size, 1);
+    void* ptr = RL_CALLOC(size, 1);
     return ptr;
 }
 
 // Internal memory reallocator
-void *MemRealloc(void *ptr, int size)
+void* MemRealloc(void* ptr, int size)
 {
-    void *ret = RL_REALLOC(ptr, size);
+    void* ret = RL_REALLOC(ptr, size);
     return ret;
 }
 
 // Internal memory free
-void MemFree(void *ptr)
+void MemFree(void* ptr)
 {
     RL_FREE(ptr);
 }
@@ -249,15 +249,15 @@ ptrdiff_t utf8_to_utf16(char8_t const* u8_begin,
 }
 
 // Load data from file into a buffer
-unsigned char *LoadFileData(const char *fileName, unsigned int *bytesRead)
+unsigned char* LoadFileData(const char* fileName, unsigned int* bytesRead)
 {
 #ifdef _WIN32
-    
+
     char16_t fileName16[256] = { 0 };
 
     utf8_to_utf16(fileName, fileName + strlen(fileName), fileName16);
 #endif
-    unsigned char *data = NULL;
+    unsigned char* data = NULL;
     *bytesRead = 0;
 
 #ifdef _WIN32
@@ -275,7 +275,7 @@ unsigned char *LoadFileData(const char *fileName, unsigned int *bytesRead)
 #ifdef _WIN32
 
 
-        FILE *file = _wfopen(fileName16, L"rb");
+        FILE* file = _wfopen(fileName16, L"rb");
 #else
         FILE* file = fopen(fileName, "rb");
 #endif // _WIN32
@@ -289,7 +289,7 @@ unsigned char *LoadFileData(const char *fileName, unsigned int *bytesRead)
 
             if (size > 0)
             {
-                data = (unsigned char *)RL_MALLOC(size*sizeof(unsigned char));
+                data = (unsigned char*)RL_MALLOC(size * sizeof(unsigned char));
 
                 // NOTE: fread() returns number of read elements instead of bytes, so we read [1 byte, size elements]
                 unsigned int count = (unsigned int)fread(data, sizeof(unsigned char), size, file);
@@ -304,7 +304,7 @@ unsigned char *LoadFileData(const char *fileName, unsigned int *bytesRead)
         }
         else TRACELOG(LOG_WARNING, "FILEIO: [%s] Failed to open file", fileName);
 #else
-    TRACELOG(LOG_WARNING, "FILEIO: Standard file io not supported, use custom file callback");
+        TRACELOG(LOG_WARNING, "FILEIO: Standard file io not supported, use custom file callback");
 #endif
     }
     else TRACELOG(LOG_WARNING, "FILEIO: File name provided is not valid");
@@ -313,15 +313,26 @@ unsigned char *LoadFileData(const char *fileName, unsigned int *bytesRead)
 }
 
 // Unload file data allocated by LoadFileData()
-void UnloadFileData(unsigned char *data)
+void UnloadFileData(unsigned char* data)
 {
     RL_FREE(data);
 }
 
 // Save data to file from buffer
-bool SaveFileData(const char *fileName, void *data, unsigned int bytesToWrite)
+bool SaveFileData(const char* fileName, void* data, unsigned int bytesToWrite)
 {
+#ifdef _WIN32
+
+    char16_t fileName16[256] = { 0 };
+
+    utf8_to_utf16(fileName, fileName + strlen(fileName), fileName16);
+#endif
+
     bool success = false;
+
+#ifdef _WIN32
+    fileName = fileName16;
+#endif
 
     if (fileName != NULL)
     {
@@ -330,7 +341,12 @@ bool SaveFileData(const char *fileName, void *data, unsigned int bytesToWrite)
             return saveFileData(fileName, data, bytesToWrite);
         }
 #if defined(SUPPORT_STANDARD_FILEIO)
-        FILE *file = fopen(fileName, "wb");
+
+#ifdef _WIN32
+        FILE* file = _wfopen(fileName16, L"wb");
+#else
+        FILE* file = fopen(fileName, "wb");
+#endif
 
         if (file != NULL)
         {
@@ -345,7 +361,7 @@ bool SaveFileData(const char *fileName, void *data, unsigned int bytesToWrite)
         }
         else TRACELOG(LOG_WARNING, "FILEIO: [%s] Failed to open file", fileName);
 #else
-    TRACELOG(LOG_WARNING, "FILEIO: Standard file io not supported, use custom file callback");
+        TRACELOG(LOG_WARNING, "FILEIO: Standard file io not supported, use custom file callback");
 #endif
     }
     else TRACELOG(LOG_WARNING, "FILEIO: File name provided is not valid");
@@ -355,9 +371,9 @@ bool SaveFileData(const char *fileName, void *data, unsigned int bytesToWrite)
 
 // Load text data from file, returns a '\0' terminated string
 // NOTE: text chars array should be freed manually
-char *LoadFileText(const char *fileName)
+char* LoadFileText(const char* fileName)
 {
-    char *text = NULL;
+    char* text = NULL;
 #ifdef _WIN32
 
     char16_t fileName16[256] = { 0 };
@@ -393,7 +409,7 @@ char *LoadFileText(const char *fileName)
 
             if (size > 0)
             {
-                text = (char *)RL_MALLOC((size + 1)*sizeof(char));
+                text = (char*)RL_MALLOC((size + 1) * sizeof(char));
                 unsigned int count = (unsigned int)fread(text, sizeof(char), size, file);
 
                 // WARNING: \r\n is converted to \n on reading, so,
@@ -411,7 +427,7 @@ char *LoadFileText(const char *fileName)
         }
         else TRACELOG(LOG_WARNING, "FILEIO: [%s] Failed to open text file", fileName);
 #else
-    TRACELOG(LOG_WARNING, "FILEIO: Standard file io not supported, use custom file callback");
+        TRACELOG(LOG_WARNING, "FILEIO: Standard file io not supported, use custom file callback");
 #endif
     }
     else TRACELOG(LOG_WARNING, "FILEIO: File name provided is not valid");
@@ -420,14 +436,21 @@ char *LoadFileText(const char *fileName)
 }
 
 // Unload file text data allocated by LoadFileText()
-void UnloadFileText(char *text)
+void UnloadFileText(char* text)
 {
     RL_FREE(text);
 }
 
 // Save text data to file (write), string must be '\0' terminated
-bool SaveFileText(const char *fileName, char *text)
+bool SaveFileText(const char* fileName, char* text)
 {
+#ifdef _WIN32
+
+    char16_t fileName16[256] = { 0 };
+
+    utf8_to_utf16(fileName, fileName + strlen(fileName), fileName16);
+#endif
+
     bool success = false;
 
     if (fileName != NULL)
@@ -437,7 +460,11 @@ bool SaveFileText(const char *fileName, char *text)
             return saveFileText(fileName, text);
         }
 #if defined(SUPPORT_STANDARD_FILEIO)
-        FILE *file = fopen(fileName, "wt");
+#ifdef _WIN32
+        FILE* file = _wfopen(fileName16, L"wt");
+#else
+        FILE* file = fopen(fileName, "wt");
+#endif
 
         if (file != NULL)
         {
@@ -451,7 +478,7 @@ bool SaveFileText(const char *fileName, char *text)
         }
         else TRACELOG(LOG_WARNING, "FILEIO: [%s] Failed to open text file", fileName);
 #else
-    TRACELOG(LOG_WARNING, "FILEIO: Standard file io not supported, use custom file callback");
+        TRACELOG(LOG_WARNING, "FILEIO: Standard file io not supported, use custom file callback");
 #endif
     }
     else TRACELOG(LOG_WARNING, "FILEIO: File name provided is not valid");
@@ -461,7 +488,7 @@ bool SaveFileText(const char *fileName, char *text)
 
 #if defined(PLATFORM_ANDROID)
 // Initialize asset manager from android app
-void InitAssetManager(AAssetManager *manager, const char *dataPath)
+void InitAssetManager(AAssetManager* manager, const char* dataPath)
 {
     assetManager = manager;
     internalDataPath = dataPath;
@@ -469,7 +496,7 @@ void InitAssetManager(AAssetManager *manager, const char *dataPath)
 
 // Replacement for fopen()
 // Ref: https://developer.android.com/ndk/reference/group/asset
-FILE *android_fopen(const char *fileName, const char *mode)
+FILE* android_fopen(const char* fileName, const char* mode)
 {
     if (mode[0] == 'w')
     {
@@ -477,14 +504,14 @@ FILE *android_fopen(const char *fileName, const char *mode)
         // assets directory through AAssetManager but we want to also be able to
         // write data when required using the standard stdio FILE access functions
         // Ref: https://stackoverflow.com/questions/11294487/android-writing-saving-files-from-native-code-only
-        #undef fopen
+#undef fopen
         return fopen(TextFormat("%s/%s", internalDataPath, fileName), mode);
-        #define fopen(name, mode) android_fopen(name, mode)
+#define fopen(name, mode) android_fopen(name, mode)
     }
     else
     {
         // NOTE: AAsset provides access to read-only asset
-        AAsset *asset = AAssetManager_open(assetManager, fileName, AASSET_MODE_UNKNOWN);
+        AAsset* asset = AAssetManager_open(assetManager, fileName, AASSET_MODE_UNKNOWN);
 
         if (asset != NULL)
         {
@@ -493,10 +520,10 @@ FILE *android_fopen(const char *fileName, const char *mode)
         }
         else
         {
-            #undef fopen
+#undef fopen
             // Just do a regular open if file is not found in the assets
             return fopen(TextFormat("%s/%s", internalDataPath, fileName), mode);
-            #define fopen(name, mode) android_fopen(name, mode)
+#define fopen(name, mode) android_fopen(name, mode)
         }
     }
 }
@@ -506,26 +533,26 @@ FILE *android_fopen(const char *fileName, const char *mode)
 // Module specific Functions Definition
 //----------------------------------------------------------------------------------
 #if defined(PLATFORM_ANDROID)
-static int android_read(void *cookie, char *buf, int size)
+static int android_read(void* cookie, char* buf, int size)
 {
-    return AAsset_read((AAsset *)cookie, buf, size);
+    return AAsset_read((AAsset*)cookie, buf, size);
 }
 
-static int android_write(void *cookie, const char *buf, int size)
+static int android_write(void* cookie, const char* buf, int size)
 {
     TRACELOG(LOG_WARNING, "ANDROID: Failed to provide write access to APK");
 
     return EACCES;
 }
 
-static fpos_t android_seek(void *cookie, fpos_t offset, int whence)
+static fpos_t android_seek(void* cookie, fpos_t offset, int whence)
 {
-    return AAsset_seek((AAsset *)cookie, offset, whence);
+    return AAsset_seek((AAsset*)cookie, offset, whence);
 }
 
-static int android_close(void *cookie)
+static int android_close(void* cookie)
 {
-    AAsset_close((AAsset *)cookie);
+    AAsset_close((AAsset*)cookie);
     return 0;
 }
 #endif  // PLATFORM_ANDROID
