@@ -428,12 +428,14 @@ typedef enum {
 
 // Color blending modes (pre-defined)
 typedef enum {
-    RL_BLEND_ALPHA = 0,                // Blend textures considering alpha (default)
-    RL_BLEND_ADDITIVE,                 // Blend textures adding colors
-    RL_BLEND_MULTIPLIED,               // Blend textures multiplying colors
-    RL_BLEND_ADD_COLORS,               // Blend textures adding colors (alternative)
-    RL_BLEND_SUBTRACT_COLORS,          // Blend textures subtracting colors (alternative)
-    RL_BLEND_CUSTOM                    // Blend textures using custom src/dst factors (use rlSetBlendFactors())
+    RL_BLEND_ALPHA = 0,                 // Blend textures considering alpha (default)
+    RL_BLEND_ADDITIVE,                  // Blend textures adding colors
+    RL_BLEND_MULTIPLIED,                // Blend textures multiplying colors
+    RL_BLEND_ADD_COLORS,                // Blend textures adding colors (alternative)
+    RL_BLEND_SUBTRACT_COLORS,           // Blend textures subtracting colors (alternative)
+    RL_BLEND_ALPHA_PREMULTIPLY,         // Blend premultiplied textures considering alpha
+    RL_BLEND_CUSTOM,                    // Blend textures using custom src/dst factors (use rlSetBlendFactors())
+    RL_BLEND_CUSTOM_SEPARATE            // Blend textures using custom src/dst factors (use rlSetBlendFactorsSeparate())
 } rlBlendMode;
 
 // Shader location point type
@@ -588,6 +590,7 @@ RLAPI void rlClearScreenBuffers(void);                  // Clear used screen buf
 RLAPI void rlCheckErrors(void);                         // Check and log OpenGL error codes
 RLAPI void rlSetBlendMode(int mode);                    // Set blending mode
 RLAPI void rlSetBlendFactors(int glSrcFactor, int glDstFactor, int glEquation); // Set blending mode factor and equation (using OpenGL factors)
+RLAPI void rlSetBlendFactorsSeparate(int glSrcRGB, int glDstRGB, int glSrcAlpha, int glDstAlpha, int glEqRGB, int glEqAlpha); // Set blending mode factors and equations separately (using OpenGL factors)
 
 //------------------------------------------------------------------------------------
 // Functions Declaration - rlgl functionality
@@ -692,6 +695,16 @@ RLAPI void rlSetMatrixViewOffsetStereo(Matrix right, Matrix left);        // Set
 // Quick and dirty cube/quad buffers load->draw->unload
 RLAPI void rlLoadDrawCube(void);     // Load and draw a cube
 RLAPI void rlLoadDrawQuad(void);     // Load and draw a quad
+
+// Ext
+RLAPI void rlGenTextures(int n, unsigned int* textures);
+RLAPI void rlTexImage2D(unsigned int target, int level, int internalformat, int width, int height, int border, unsigned int format, unsigned int type, const void* pixels);
+RLAPI void rlTexParameteri(unsigned int target, unsigned int pname, int param);
+RLAPI void rlTexParameteriv(unsigned int target, unsigned int pname, const int* params);
+RLAPI void rlCompressedTexImage2D(unsigned int target, int level, unsigned int internalformat, int width, int height, int border, int imageSize, const void* data);
+RLAPI bool rlGetExtSupportFloatTexture();
+RLAPI void rlBindTexture(unsigned int target, unsigned int texture);
+RLAPI void rlSetMatrixTransform(float* matf);  // Set transformation matrix
 
 #if defined(__cplusplus)
 }
@@ -920,10 +933,18 @@ typedef struct rlglData {
         Matrix projectionStereo[2];         // VR stereo rendering eyes projection matrices
         Matrix viewOffsetStereo[2];         // VR stereo rendering eyes view offset matrices
 
+        // Blending variables
         int currentBlendMode;               // Blending mode active
         int glBlendSrcFactor;               // Blending source factor
         int glBlendDstFactor;               // Blending destination factor
         int glBlendEquation;                // Blending equation
+        int glBlendSrcFactorRGB;            // Blending source RGB factor
+        int glBlendDestFactorRGB;           // Blending destination RGB factor
+        int glBlendSrcFactorAlpha;          // Blending source alpha factor
+        int glBlendDestFactorAlpha;         // Blending destination alpha factor
+        int glBlendEquationRGB;             // Blending equation for RGB
+        int glBlendEquationAlpha;           // Blending equation for alpha
+        bool glCustomBlendModeModified;     // Custom blending factor and equation modification status
 
         int framebufferWidth;               // Default framebuffer width
         int framebufferHeight;              // Default framebuffer height
@@ -1767,7 +1788,7 @@ void rlCheckErrors()
 void rlSetBlendMode(int mode)
 {
 #if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
-    if (RLGL.State.currentBlendMode != mode)
+    if ((RLGL.State.currentBlendMode != mode) || ((mode == RL_BLEND_CUSTOM || mode == RL_BLEND_CUSTOM_SEPARATE) && RLGL.State.glCustomBlendModeModified))
     {
         rlDrawRenderBatch(RLGL.currentBatch);
 
@@ -1778,11 +1799,25 @@ void rlSetBlendMode(int mode)
             case RL_BLEND_MULTIPLIED: glBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA); glBlendEquation(GL_FUNC_ADD); break;
             case RL_BLEND_ADD_COLORS: glBlendFunc(GL_ONE, GL_ONE); glBlendEquation(GL_FUNC_ADD); break;
             case RL_BLEND_SUBTRACT_COLORS: glBlendFunc(GL_ONE, GL_ONE); glBlendEquation(GL_FUNC_SUBTRACT); break;
-            case RL_BLEND_CUSTOM: glBlendFunc(RLGL.State.glBlendSrcFactor, RLGL.State.glBlendDstFactor); glBlendEquation(RLGL.State.glBlendEquation); break;
+            case RL_BLEND_ALPHA_PREMULTIPLY: glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); glBlendEquation(GL_FUNC_ADD); break;
+            case RL_BLEND_CUSTOM:
+            {
+                // NOTE: Using GL blend src/dst factors and GL equation configured with rlSetBlendFactors()
+                glBlendFunc(RLGL.State.glBlendSrcFactor, RLGL.State.glBlendDstFactor); glBlendEquation(RLGL.State.glBlendEquation);
+
+            } break;
+            case RL_BLEND_CUSTOM_SEPARATE:
+            {
+                // NOTE: Using GL blend src/dst factors and GL equation configured with rlSetBlendFactorsSeparate()
+                glBlendFuncSeparate(RLGL.State.glBlendSrcFactorRGB, RLGL.State.glBlendDestFactorRGB, RLGL.State.glBlendSrcFactorAlpha, RLGL.State.glBlendDestFactorAlpha);
+                glBlendEquationSeparate(RLGL.State.glBlendEquationRGB, RLGL.State.glBlendEquationAlpha);
+
+            } break;
             default: break;
         }
 
         RLGL.State.currentBlendMode = mode;
+        RLGL.State.glCustomBlendModeModified = false;
     }
 #endif
 }
@@ -1791,9 +1826,39 @@ void rlSetBlendMode(int mode)
 void rlSetBlendFactors(int glSrcFactor, int glDstFactor, int glEquation)
 {
 #if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
-    RLGL.State.glBlendSrcFactor = glSrcFactor;
-    RLGL.State.glBlendDstFactor = glDstFactor;
-    RLGL.State.glBlendEquation = glEquation;
+    if ((RLGL.State.glBlendSrcFactor != glSrcFactor) ||
+        (RLGL.State.glBlendDstFactor != glDstFactor) ||
+        (RLGL.State.glBlendEquation != glEquation))
+    {
+        RLGL.State.glBlendSrcFactor = glSrcFactor;
+        RLGL.State.glBlendDstFactor = glDstFactor;
+        RLGL.State.glBlendEquation = glEquation;
+
+        RLGL.State.glCustomBlendModeModified = true;
+    }
+#endif
+}
+
+// Set blending mode factor and equation separately for RGB and alpha
+void rlSetBlendFactorsSeparate(int glSrcRGB, int glDstRGB, int glSrcAlpha, int glDstAlpha, int glEqRGB, int glEqAlpha)
+{
+#if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
+    if ((RLGL.State.glBlendSrcFactorRGB != glSrcRGB) ||
+        (RLGL.State.glBlendDestFactorRGB != glDstRGB) ||
+        (RLGL.State.glBlendSrcFactorAlpha != glSrcAlpha) ||
+        (RLGL.State.glBlendDestFactorAlpha != glDstAlpha) ||
+        (RLGL.State.glBlendEquationRGB != glEqRGB) ||
+        (RLGL.State.glBlendEquationAlpha != glEqAlpha))
+    {
+        RLGL.State.glBlendSrcFactorRGB = glSrcRGB;
+        RLGL.State.glBlendDestFactorRGB = glDstRGB;
+        RLGL.State.glBlendSrcFactorAlpha = glSrcAlpha;
+        RLGL.State.glBlendDestFactorAlpha = glDstAlpha;
+        RLGL.State.glBlendEquationRGB = glEqRGB;
+        RLGL.State.glBlendEquationAlpha = glEqAlpha;
+
+        RLGL.State.glCustomBlendModeModified = true;
+    }
 #endif
 }
 
@@ -4232,6 +4297,45 @@ void rlLoadDrawCube(void)
     glDeleteBuffers(1, &cubeVBO);
     glDeleteVertexArrays(1, &cubeVAO);
 #endif
+}
+
+void rlGenTextures(int n, unsigned int* textures) {
+    glGenTextures(n, textures);
+}
+
+void rlTexImage2D(unsigned int target, int level, int internalformat, int width, int height, int border, unsigned int format, unsigned int type, const void* pixels) {
+    glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels);
+}
+
+void rlTexParameteri(unsigned int target, unsigned int pname, int param) {
+    glTexParameteri(target, pname, param);
+}
+
+void rlTexParameteriv(unsigned int target, unsigned int pname, const int* params) {
+    rlTexParameteriv(target, pname, params);
+}
+
+void rlCompressedTexImage2D(unsigned int target, int level, unsigned int internalformat, int width, int height, int border, int imageSize, const void* data)
+{
+    glCompressedTexImage2D(target, level, internalformat, width, height, border, imageSize, data);
+}
+
+bool rlGetExtSupportFloatTexture() {
+    return RLGL.ExtSupported.texFloat32;
+}
+
+void rlBindTexture(unsigned int target, unsigned int texture) {
+    glBindTexture(target, texture);
+}
+
+void rlSetMatrixTransform(float* matf) {
+    // Matrix creation from array
+    Matrix mat = { matf[0], matf[4], matf[8], matf[12],
+                   matf[1], matf[5], matf[9], matf[13],
+                   matf[2], matf[6], matf[10], matf[14],
+                   matf[3], matf[7], matf[11], matf[15] };
+
+    *RLGL.State.currentMatrix = mat;
 }
 
 // Get name string for pixel format
