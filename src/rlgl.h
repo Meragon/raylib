@@ -705,6 +705,7 @@ RLAPI void rlCompressedTexImage2D(unsigned int target, int level, unsigned int i
 RLAPI bool rlGetExtSupportFloatTexture();
 RLAPI void rlBindTexture(unsigned int target, unsigned int texture);
 RLAPI void rlSetMatrixTransform(float* matf);  // Set transformation matrix
+RLAPI void rlDrawElements(unsigned int mode, int count, unsigned int type, const void* indices);
 
 #if defined(__cplusplus)
 }
@@ -4336,6 +4337,10 @@ void rlSetMatrixTransform(float* matf) {
                    matf[3], matf[7], matf[11], matf[15] };
 
     *RLGL.State.currentMatrix = mat;
+}
+
+void rlDrawElements(unsigned int mode, int count, unsigned int type, const void* indices) {
+    glDrawElements(mode, count, type, indices);
 }
 
 // Get name string for pixel format
