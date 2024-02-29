@@ -1,3 +1,13 @@
+
+### Linux Build
+```shell
+git clone https://github.com/Meragon/raylib.git
+cd raylib
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBUILD_EXAMPLES=OFF ..
+make
+```
+---
 <img align="left" src="https://github.com/raysan5/raylib/blob/master/logo/raylib_logo_animation.gif" width="288px">
 
 **raylib is a simple and easy-to-use library to enjoy videogames programming.**
